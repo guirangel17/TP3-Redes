@@ -55,9 +55,9 @@ def servent():
     LOCALPORT = int(sys.argv[1])
     key_values_file = sys.argv[2]
 
-    IP_PORT_list = list()
+    neighbors = list()
     for i in range(3, num_params):
-        IP_PORT_list.append(sys.argv[i])
+        neighbors.append(sys.argv[i])
     
     key_values = {}
     key_values = read_file(key_values_file)
@@ -92,10 +92,10 @@ def servent():
             QUERY = make_pkt(2, 3, IP, PORT, sqn+1, TXT)
             
             # enviar a mnsg para todos os vizinhos
-            for i in IP_PORT_list:
-                IP_list = i.split(":")[0]
-                PORT_list = int(i.split(":")[1])
-                #address = (IP_list,PORT_list)
+            for i in neighbors:
+                IP_neighbor = i.split(":")[0]
+                PORT_neighbor = int(i.split(":")[1])
+                #address = (IP_neighbor,PORT_neighbor)
                 #sendto (QUERY, address) 
             
             if TXT in key_values.keys():

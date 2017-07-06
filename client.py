@@ -39,6 +39,8 @@ def client():
     msg = raw_input("Digite uma chave: ")
     message = make_pkt_client(1, msg)
 
+    at_least_one_answer = False
+
     try:
         # Send data
         print >>sys.stderr, 'sending "%s"' % message
@@ -48,48 +50,37 @@ def client():
             sent = sock.sendto(message, server_address)
             sock.settimeout(4.0)
 
-            # Resposta de um servidor
-            data, address_server = sock.recvfrom(20)
-            TYP = struct.unpack(">H", data[0:2])[0]
-            TXT = data[2:]
-
-            print "Key was found in the servent: " + address_server[0] + " and your value is " + TXT
-
-        except socket.timeout:
-            print "Primeiro timeout"
-            try:
-                # Envia mensagem ao seu servidor associado
-                sent = sock.sendto(message, server_address)
-                sock.settimeout(4.0)
-
+            while(1):
                 # Resposta de um servidor
-                data, address_server = sock.recvfrom(20)
+                data, address_server = sock.recvfrom(100)
                 TYP = struct.unpack(">H", data[0:2])[0]
                 TXT = data[2:]
+                print "\nServent: " + address_server[0] + ":" + str(address_server[1]) + " responded: \nkey\tvalue"
+                print "---\t-----"
+                print TXT
+                at_least_one_answer = True
 
-                print "Key was found in the servent: " + address_server[0] + " and your value is " + TXT
+        except socket.timeout:
+            # Esperou por 4 segundos e nao obteve nenhuma resposta
+            if (at_least_one_answer == False):
+                print "First Timeout. Resending"
+                try:
+                    # Envia mensagem ao seu servidor associado
+                    sent = sock.sendto(message, server_address)
+                    sock.settimeout(4.0)
 
-                # sock.recvfrom()
+                    # Resposta de um servidor
+                    while (1):
+                        # Resposta de um servidor
+                        data, address_server = sock.recvfrom(100)
+                        TYP = struct.unpack(">H", data[0:2])[0]
+                        TXT = data[2:]
+                        print "\nServent: " + address_server[0] + ":" + str(address_server[1]) + " responded: \nkey\tvalue"
+                        print "---\t-----"
+                        print TXT
 
-                # Aguarda 4 segundos uma respota
-                # Se receber uma respota, entra em loop até aguardar 4 segundos sem receber nada novo
-                # Exibe respostas ao usuário
-
-                # sock.rcvfrom()
-                # sock.settimeout(4seg)
-                # if (sock.recvfrom) ----> irá retornar erro caso não seja recebido em 4seg, tem que tratar
-                #       while (data) & timeout < 4seg
-                #           print data
-
-
-
-                # Receive response
-                # print >>sys.stderr, 'waiting to receive'
-                # data, server = sock.recvfrom(4096)
-                # print >>sys.stderr, 'received "%s"' % data
-
-            except socket.timeout:
-                print "Segundo timeout, bye"
+                except socket.timeout:
+                    print "Second Timeout! Key not found"
 
     finally:
         print >>sys.stderr, 'closing socket'

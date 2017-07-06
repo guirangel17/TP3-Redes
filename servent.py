@@ -7,7 +7,6 @@ import socket
 import sys
 import struct
 
-
 '''
 Formato do quadro:
 TYP TTL IP PORT SQN TXT 
@@ -39,7 +38,7 @@ def make_pkt_client(typ, txt):
 def read_file(file_name):
     try:
         f = open(file_name, "r")
-    except:
+    except (OSError, IOError) as e:
         print "Problem to open the file"
 
     dictionary = {}
@@ -51,6 +50,7 @@ def read_file(file_name):
             values = ' '.join(text)
             dictionary.update({key:values})
 
+    f.close()
     return dictionary
 
 def servent():
@@ -63,6 +63,8 @@ def servent():
     LOCALPORT = int(sys.argv[1])
     key_values_file = sys.argv[2]
 
+    print "NOME DO ARQUIVO: " + key_values_file
+
     neighbors = list()
     for i in range(3, num_params):
         neighbors.append(sys.argv[i])
@@ -70,14 +72,14 @@ def servent():
     
     key_values = {}
     key_values = read_file(key_values_file)
-           
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # Bind the socket to the port
     server_address = ('localhost', LOCALPORT)
     print >>sys.stderr, 'starting up on %s port %s' % server_address
-    sock.bind(server_address)
 
+    sock.bind(server_address)
     print >> sys.stderr, '\nwaiting to receive message'
 
     sqn = 0 #sequence number
@@ -86,17 +88,16 @@ def servent():
     # 1 - CLIREQ
     # 2 - QUERY
     # 3 - RESPONSE
-    msg_history = {}
-    log = list()
-    #msg_history = {'ip':0, 'port':0, 'sqn': 0, 'txt': ''}
-    
-    while (1): 
-        data, address_client = sock.recvfrom(250)
-        TYP = struct.unpack(">H", data[0:2])[0]
-        sqn=sqn+1      
+    msg_history = list()
 
-        if(TYP == 1): #mensagem vinda do client
-            TXT = data[2:] #chave que está procurando
+    while (1):
+        data, address = sock.recvfrom(250)
+        TYP = struct.unpack(">H", data[0:2])[0]
+
+        if(TYP == 1): # mensagem vinda do client
+            sqn = sqn + 1
+            address_client = address
+            TXT = data[2:] # chave que está procurando
             TTL = 3
 
             # Enviar a mnsg para todos os vizinhos
@@ -104,11 +105,10 @@ def servent():
                 IP_neighbor = i.split(":")[0]
                 PORT_neighbor = int(i.split(":")[1])
                 address_neighbor = (IP_neighbor,PORT_neighbor)
-                
-                QUERY = make_pkt(2, TTL, IP_neighbor, PORT_neighbor, sqn, TXT)
+
+                QUERY = make_pkt(2, TTL, address_client[0], address_client[1], sqn, TXT)
                 sock.sendto(QUERY, address_neighbor)
-            
-            
+
             if TXT in key_values.keys():
                 # responder ao cliente que a chave foi encontrada
                 R = (TXT + '\t' + key_values[TXT] + '\0')
@@ -117,56 +117,39 @@ def servent():
 
         #mensagem vinda de outro servent    
         elif (TYP == 2):
+            address_server_before = address
+
             TTL = struct.unpack(">H", data[2:4])[0]
             IP = socket.inet_ntoa(struct.unpack("=4sl", data[4:12])[0])
             PORT = struct.unpack(">H", data[12:14])[0]
             SQN = struct.unpack(">I", data[14:18])[0]
             TXT = data[18:]
 
-            # se a mnsg n foi vista anteriormente
-            #       procurar chave         
-            
-            msg_history.update({'ip':IP, 'port':PORT, 'sqn':SQN, 'txt': TXT})
+            # se a mnsg n foi vista anteriormente, procurar chave
+            received_msg = (IP, PORT, SQN, TXT)
 
-            for dict_item in log:
-                if dict_item['ip'] == IP:
-                    #print dict_item['ip']
-                    if dict_item['port'] == PORT:
-                        if dict_item['sqn'] == SQN:
-                            if dict_item['txt'] == TXT:
-                                print 'mesma mnsg'
-               # print dict_item[key]
-            
+            if (received_msg not in msg_history):
+                msg_history.append(received_msg)
 
-            log.append(msg_history)
-    
-            print log
+                # Alagamento confiavel OSPF
+                if TXT in key_values.keys():
+                    # responder ao cliente que a chave foi encontrada
+                    R = (TXT + '\t' + key_values[TXT] + '\0')
+                    RESPONSE = make_pkt_client(3, R)
+                    client_address = (IP,PORT)
+                    sock.sendto(RESPONSE, client_address)
 
+                    TTL = TTL - 1
+                    if TTL > 0:
+                        # Manda pros vizinhos, menos aquele que chamou
+                        for i in neighbors:
+                            if i.split(":")[0] != address_server_before[0]: # Verificando o vizinho que chamou
+                                IP_neighbor = i.split(":")[0]
+                                PORT_neighbor = int(i.split(":")[1])
+                                address_neighbor = (IP_neighbor, PORT_neighbor)
 
-            #(IP_client,PORT_client) = address_client
-            
-            #msg_history = {address_client:{SQN, TXT}}
-
-            #for key in msg_history.keys():
-            #    if msg_history
-
-            # Alagamento confiavel OSPF
-            # if mensagem nao foi recebida anteriormente:
-            #       if TXT in key_values.keys():
-            #           # responder ao cliente que a chave foi encontrada
-            #            R = (TXT + '\t' + '\0')
-            #            RESPONSE = make_pkt_client(3, R)
-            #            sock.sendto(RESPONSE, address_client)
-            #
-            #       TTL = TTL - 1
-            #       if TTL > 0:
-            #           manda pros vizinho, menos aquele que chamou
-            #           QUERY = make_pkt(TYP,TTL-1,IP,PORT,SQN,TXT)
-            print ''
-
-        # if data:
-        #     sent = sock.sendto(data, address)
-        #     print >> sys.stderr, 'sent %s bytes back to %s' % (sent, address)
+                                QUERY = make_pkt(TYP, TTL, IP, PORT, SQN, TXT)
+                                sock.sendto(QUERY, address_neighbor)
 
 if __name__ == "__main__":
     sys.exit(servent())

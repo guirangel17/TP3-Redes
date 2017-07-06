@@ -66,6 +66,7 @@ def servent():
     neighbors = list()
     for i in range(3, num_params):
         neighbors.append(sys.argv[i])
+        print sys.argv[i]
     
     key_values = {}
     key_values = read_file(key_values_file)
@@ -85,10 +86,14 @@ def servent():
     # 1 - CLIREQ
     # 2 - QUERY
     # 3 - RESPONSE
-
+    msg_history = {}
+    log = list()
+    #msg_history = {'ip':0, 'port':0, 'sqn': 0, 'txt': ''}
+    
     while (1): 
         data, address_client = sock.recvfrom(250)
         TYP = struct.unpack(">H", data[0:2])[0]
+        sqn=sqn+1      
 
         if(TYP == 1): #mensagem vinda do client
             TXT = data[2:] #chave que está procurando
@@ -99,13 +104,14 @@ def servent():
                 IP_neighbor = i.split(":")[0]
                 PORT_neighbor = int(i.split(":")[1])
                 address_neighbor = (IP_neighbor,PORT_neighbor)
-
-                QUERY = make_pkt(2, TTL, IP_neighbor, PORT_neighbor, sqn + 1, TXT)
+                
+                QUERY = make_pkt(2, TTL, IP_neighbor, PORT_neighbor, sqn, TXT)
                 sock.sendto(QUERY, address_neighbor)
+            
             
             if TXT in key_values.keys():
                 # responder ao cliente que a chave foi encontrada
-                R = (TXT + '\t' + '\0')
+                R = (TXT + '\t' + key_values[TXT] + '\0')
                 RESPONSE = make_pkt_client(3, R)
                 sock.sendto(RESPONSE, address_client)
 
@@ -116,6 +122,33 @@ def servent():
             PORT = struct.unpack(">H", data[12:14])[0]
             SQN = struct.unpack(">I", data[14:18])[0]
             TXT = data[18:]
+
+            # se a mnsg n foi vista anteriormente
+            #       procurar chave         
+            
+            msg_history.update({'ip':IP, 'port':PORT, 'sqn':SQN, 'txt': TXT})
+
+            for dict_item in log:
+                if dict_item['ip'] == IP:
+                    #print dict_item['ip']
+                    if dict_item['port'] == PORT:
+                        if dict_item['sqn'] == SQN:
+                            if dict_item['txt'] == TXT:
+                                print 'mesma mnsg'
+               # print dict_item[key]
+            
+
+            log.append(msg_history)
+    
+            print log
+
+
+            #(IP_client,PORT_client) = address_client
+            
+            #msg_history = {address_client:{SQN, TXT}}
+
+            #for key in msg_history.keys():
+            #    if msg_history
 
             # Alagamento confiavel OSPF
             # if mensagem nao foi recebida anteriormente:

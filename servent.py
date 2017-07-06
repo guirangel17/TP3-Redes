@@ -1,5 +1,7 @@
-#Programa servent, responsavel pelo armazenamento da base de dados chave-valor e pelo controle da troca de mensagem com seus pares.
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+#Programa servent, responsavel pelo armazenamento da base de dados chave-valor e pelo controle da troca de mensagem com seus pares.
 
 import socket
 import sys
@@ -25,13 +27,20 @@ def make_pkt(typ, ttl, ip, port, sqn, txt):
 
     return pkt
 
+def make_pkt_client(typ, txt):
+    TYP = struct.pack('>H', typ)
+    txt = map(lambda x: ord(x), txt)
+    txt = struct.pack('%dB' % len(txt), *txt)
 
-def toString(data):
-	return ''.join('%02X' % ord(x) for x in data)
+    pkt = TYP + txt
+    return pkt
 
 # Cria o dicionario de chave-valor passado no arquivo como parametro
-def read_file(file_name): 
-    f = open(file_name, "r")
+def read_file(file_name):
+    try:
+        f = open(file_name, "r")
+    except:
+        print "Problem to open the file"
 
     dictionary = {}
     for line in f:
@@ -43,7 +52,6 @@ def read_file(file_name):
             dictionary.update({key:values})
 
     return dictionary
-
 
 def servent():
     num_params = len(sys.argv)
@@ -71,56 +79,61 @@ def servent():
 
     print >> sys.stderr, '\nwaiting to receive message'
 
-    sqn=0 #sequence number
+    sqn = 0 #sequence number
+
+    # Message types
+    # 1 - CLIREQ
+    # 2 - QUERY
+    # 3 - RESPONSE
 
     while (1): 
-        data, address = sock.recvfrom(250)
-
+        data, address_client = sock.recvfrom(250)
         TYP = struct.unpack(">H", data[0:2])[0]
-        TTL = struct.unpack(">H", data[2:4])[0]
-        IP = socket.inet_ntoa(struct.unpack("=4sl", data[4:12])[0])
-        PORT = struct.unpack(">H", data[12:14])[0]
-        SQN = struct.unpack(">I", data[14:18])[0]
-        TXT = data[18:]
-        #print >> sys.stderr, 'received %s bytes from %s' % (len(data), address)
-        #print >> sys.stderr, data
-        print TXT
-
-        print TYP
 
         if(TYP == 1): #mensagem vinda do client
-            QUERY = make_pkt(2, 3, IP, PORT, sqn+1, TXT)
-            
-            # enviar a mnsg para todos os vizinhos
+            TXT = data[2:] #chave que está procurando
+            TTL = 3
+
+            # Enviar a mnsg para todos os vizinhos
             for i in IP_PORT_list:
                 IP_list = i.split(":")[0]
                 PORT_list = int(i.split(":")[1])
-                #address = (IP_list,PORT_list)
-                #sendto (QUERY, address) 
+                address_neighbor = (IP_list,PORT_list)
+
+                QUERY = make_pkt(2, TTL, IP_list, PORT_list, sqn + 1, TXT)
+                sock.sendto(QUERY, address_neighbor)
             
             if TXT in key_values.keys():
                 # responder ao cliente que a chave foi encontrada
-                # R = (TXT + \t + '\0')
-                # RESPONSE = make_pkt(3,TTL,IP,PORT,SQN,R)
-                # addres = (IP,PORT)
-                # sendto (RESPONSE, address)
-                print ''         
+                R = (TXT + '\t' + '\0')
+                RESPONSE = make_pkt_client(3, R)
+                sock.sendto(RESPONSE, address_client)
 
         #mensagem vinda de outro servent    
-        elif (TYP == 2): 
+        elif (TYP == 2):
+            TTL = struct.unpack(">H", data[2:4])[0]
+            IP = socket.inet_ntoa(struct.unpack("=4sl", data[4:12])[0])
+            PORT = struct.unpack(">H", data[12:14])[0]
+            SQN = struct.unpack(">I", data[14:18])[0]
+            TXT = data[18:]
+
             # Alagamento confiavel OSPF
             # if mensagem nao foi recebida anteriormente:
             #       if TXT in key_values.keys():
-            #           responder ao cliente que a chave foi encontrada
-            #           addres = (IP,PORT)
-            #           sendto (QUERY, address)
-            #       else:
+            #           # responder ao cliente que a chave foi encontrada
+            #            R = (TXT + '\t' + '\0')
+            #            RESPONSE = make_pkt_client(3, R)
+            #            sock.sendto(RESPONSE, address_client)
+            #
+            #       TTL = TTL - 1
+            #       if TTL > 0:
+            #           manda pros vizinho, menos aquele que chamou
             #           QUERY = make_pkt(TYP,TTL-1,IP,PORT,SQN,TXT)
-            print ''         
+            print ''
 
-        if data:
-            sent = sock.sendto(data, address)
-            print >> sys.stderr, 'sent %s bytes back to %s' % (sent, address)
+        # if data:
+        #     sent = sock.sendto(data, address)
+        #     print >> sys.stderr, 'sent %s bytes back to %s' % (sent, address)
 
 if __name__ == "__main__":
     sys.exit(servent())

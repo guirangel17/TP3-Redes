@@ -1,16 +1,16 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+''' 
+TP3 - Redes de Computadores - client.py
+ 
+Desenvolvido por:
+     - Gabriela Brant Alves                2013062901
+     - Guilherme Rangel da Silva Moura     2013062960
+'''
 
-#Programa cliente, que receberá do usuário chaves que devem ser consultadas e exibirá os resultados recebidos
+# Programa cliente, que recebera do usuario chaves que devem ser consultadas e exibira os resultados recebidos dos servents
+
 import socket
 import sys
 import struct
-
-'''
-Formato do quadro:
-TYP TTL IP PORT SQN TXT 
-2   2   4    2   4
-'''
 
 def make_pkt_client(typ, txt):
     TYP = struct.pack('>H', typ)
@@ -27,27 +27,25 @@ def client():
 
     IP_PORT = sys.argv[1]
     IP = IP_PORT.split(":")[0]
-    PORT = IP_PORT.split(":")[1]
+    PORT = int(IP_PORT.split(":")[1])
     
-    PORT = int(PORT)
-    print PORT
    
-    # Create a UDP socket
+    # Cria socket UDP
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_address = ('localhost', PORT)
+    server_address = (IP, PORT)
 
-    msg = raw_input("Digite uma chave: ")
-    message = make_pkt_client(1, msg)
+    print 'Connection established at',server_address
 
-    at_least_one_answer = False
+    while(1):
+        msg = raw_input("\n \nEnter a key: ")
+        message = make_pkt_client(1, msg)
 
-    try:
-        # Send data
-        print >>sys.stderr, 'sending "%s"' % message
+        at_least_one_answer = False
 
         try:
             # Envia mensagem ao seu servidor associado
             sent = sock.sendto(message, server_address)
+            print 'Sending', msg
             sock.settimeout(4.0)
 
             while(1):
@@ -69,7 +67,6 @@ def client():
                     sent = sock.sendto(message, server_address)
                     sock.settimeout(4.0)
 
-                    # Resposta de um servidor
                     while (1):
                         # Resposta de um servidor
                         data, address_server = sock.recvfrom(100)
@@ -80,11 +77,7 @@ def client():
                         print TXT
 
                 except socket.timeout:
-                    print "Second Timeout! Key not found"
-
-    finally:
-        print >>sys.stderr, 'closing socket'
-        sock.close()
+                    print "Second Timeout! \nKEY NOT FOUND."
 
 if __name__ == "__main__":
     sys.exit(client())

@@ -1,5 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+''' 
+TP3 - Redes de Computadores - servent.py
+ 
+Desenvolvido por:
+     - Gabriela Brant Alves                2013062901
+     - Guilherme Rangel da Silva Moura     2013062960
+'''
 
 #Programa servent, responsavel pelo armazenamento da base de dados chave-valor e pelo controle da troca de mensagem com seus pares.
 
@@ -39,7 +44,7 @@ def read_file(file_name):
     try:
         f = open(file_name, "r")
     except (OSError, IOError) as e:
-        print "Problem to open the file"
+        print "Problem to open the file."
 
     dictionary = {}
     for line in f:
@@ -63,12 +68,11 @@ def servent():
     LOCALPORT = int(sys.argv[1])
     key_values_file = sys.argv[2]
 
-    print "NOME DO ARQUIVO: " + key_values_file
+    #print "File name: " + key_values_file
 
     neighbors = list()
     for i in range(3, num_params):
         neighbors.append(sys.argv[i])
-        print sys.argv[i]
     
     key_values = {}
     key_values = read_file(key_values_file)
@@ -77,10 +81,11 @@ def servent():
 
     # Bind the socket to the port
     server_address = ('localhost', LOCALPORT)
-    print >>sys.stderr, 'starting up on %s port %s' % server_address
+    
+    print 'Connection established at',server_address
 
     sock.bind(server_address)
-    print >> sys.stderr, '\nwaiting to receive message'
+    print '\nWaiting to receive message... \n'
 
     sqn = 0 #sequence number
 
@@ -97,8 +102,11 @@ def servent():
         if(TYP == 1): # mensagem vinda do client
             sqn = sqn + 1
             address_client = address
-            TXT = data[2:] # chave que está procurando
+            TXT = data[2:] # chave que esta procurando
             TTL = 3
+            
+            print '\nTYP = CLIREQ'
+            print 'Client', address, 'is looking for key', 'TXT =', TXT
 
             # Enviar a mnsg para todos os vizinhos
             for i in neighbors:
@@ -125,7 +133,13 @@ def servent():
             SQN = struct.unpack(">I", data[14:18])[0]
             TXT = data[18:]
 
-            # se a mnsg n foi vista anteriormente, procurar chave
+            client_address = (IP,PORT)
+
+            print '\nTYP = QUERY'
+            print 'Message from servent', address, 'TTL =', TTL
+            print 'Client', client_address, 'is looking for key', TXT
+
+            # Se a mnsg n foi vista anteriormente, procurar chave
             received_msg = (IP, PORT, SQN, TXT)
 
             if (received_msg not in msg_history):
@@ -136,12 +150,13 @@ def servent():
                     # responder ao cliente que a chave foi encontrada
                     R = (TXT + '\t' + key_values[TXT] + '\0')
                     RESPONSE = make_pkt_client(3, R)
-                    client_address = (IP,PORT)
+
                     sock.sendto(RESPONSE, client_address)
 
                     TTL = TTL - 1
                     if TTL > 0:
                         # Manda pros vizinhos, menos aquele que chamou
+                        print 'Retransmitir pra vizinhos'
                         for i in neighbors:
                             if i.split(":")[0] != address_server_before[0]: # Verificando o vizinho que chamou
                                 IP_neighbor = i.split(":")[0]

@@ -68,8 +68,6 @@ def servent():
     LOCALPORT = int(sys.argv[1])
     key_values_file = sys.argv[2]
 
-    #print "File name: " + key_values_file
-
     neighbors = list()
     for i in range(3, num_params):
         neighbors.append(sys.argv[i])
@@ -81,7 +79,6 @@ def servent():
 
     # Bind the socket to the port
     server_address = ('localhost', LOCALPORT)
-    
     print 'Connection established at',server_address
 
     sock.bind(server_address)
@@ -153,18 +150,17 @@ def servent():
 
                     sock.sendto(RESPONSE, client_address)
 
-                    TTL = TTL - 1
-                    if TTL > 0:
-                        # Manda pros vizinhos, menos aquele que chamou
-                        print 'Retransmitir pra vizinhos'
-                        for i in neighbors:
-                            if i.split(":")[0] != address_server_before[0]: # Verificando o vizinho que chamou
-                                IP_neighbor = i.split(":")[0]
-                                PORT_neighbor = int(i.split(":")[1])
-                                address_neighbor = (IP_neighbor, PORT_neighbor)
+                TTL = TTL - 1
+                if TTL > 0:
+                    # Manda pros vizinhos, menos aquele que chamou
+                    for i in neighbors:
+                        IP_neighbor = i.split(":")[0]
+                        PORT_neighbor = int(i.split(":")[1])
+                        address_neighbor = (IP_neighbor, PORT_neighbor)
 
-                                QUERY = make_pkt(TYP, TTL, IP, PORT, SQN, TXT)
-                                sock.sendto(QUERY, address_neighbor)
+                        if address_neighbor != address_server_before: # Verificando o vizinho que chamou
+                            QUERY = make_pkt(TYP, TTL, IP, PORT, SQN, TXT)
+                            sock.sendto(QUERY, address_neighbor)
 
 if __name__ == "__main__":
     sys.exit(servent())

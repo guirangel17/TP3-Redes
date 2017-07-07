@@ -28,8 +28,7 @@ def client():
     IP_PORT = sys.argv[1]
     IP = IP_PORT.split(":")[0]
     PORT = int(IP_PORT.split(":")[1])
-    
-   
+
     # Cria socket UDP
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = (IP, PORT)

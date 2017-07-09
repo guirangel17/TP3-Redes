@@ -48,13 +48,14 @@ def read_file(file_name):
 
     dictionary = {}
     for line in f:
-        words = line.split()
-        if (words[0] != '#'): # primeira palavra da linha
-            if (str.strip(words[0][0]) != '#'): # primeiro caracter da palavra
-                key = str.strip(words[0])
-                text = words[1:]
-                values = ' '.join(text)
-                dictionary.update({key:values})
+        if not line.isspace(): # verifica se a linha nao esta vazia
+            words = line.split()
+            if (words[0] != '#'): # primeira palavra da linha
+                if (str.strip(words[0][0]) != '#'): # primeiro caracter da palavra
+                    key = str.strip(words[0])
+                    text = words[1:]
+                    values = ' '.join(text)
+                    dictionary.update({key:values})
 
     f.close()
     return dictionary

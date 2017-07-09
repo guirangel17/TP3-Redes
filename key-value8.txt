@@ -1,0 +1,65 @@
+# comentario1
+#comentario2
+chave		valor
+
+
+
+
+
+
+    
+        
+        oi
+            #oi
+                    te#te
+c#have3
+ch#ave4
+	# comentario4
+  #comentario3
+chave5		#valor5
+# comentario1
+#comentario2
+chave6		valor
+chave7		valor2 valor2 valor2
+c#have8
+ch#ave9
+	# comentario4
+  #comentario3
+chave10		#valor5
+# comentario1
+#comentario2
+chave11		valor
+chave12		valor2 valor2 valor2
+c#have13
+ch#ave14
+	# comentario4
+  #comentario3
+chave5		#valor5
+# comentario1
+#comentario2
+chave15		valor
+chave16		valor2 valor2 valor2
+c#have17
+ch#ave18
+	# comentario4
+  #comentario3
+chave19		#valor5
+# comentario1
+#comentario2
+chave20		valor
+chave21		valor2 valor2 valor2
+c#have22
+ch#ave23
+	# comentario4
+  #comentario3
+chave24		#valor5
+# comentario1
+#comentario2
+chave		valor
+chave25		valor2 valor2 valor2
+c#have27
+ch#ave26
+	# comentario4
+  #comentario3
+chave28		#valor5
+
